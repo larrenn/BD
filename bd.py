@@ -717,4 +717,123 @@ def demonstrate_system():
     print("\n=== ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА ===")
 
 if __name__ == "__main__":
-    demonstrate_system()
+    def demonstrate_system():
+        """Демонстрация работы всей системы без ошибок при повторных запусках"""
+    
+    # Инициализация
+    db = DatabaseManager("demo_ecommerce.db")
+    
+    print("=== ДЕМОНСТРАЦИЯ СИСТЕМЫ УПРАВЛЕНИЯ БАЗОЙ ДАННЫХ ===\n")
+    
+    # 1. Создание тестовых данных с проверкой существования
+    print("1. СОЗДАНИЕ ТЕСТОВЫХ ДАННЫХ")
+    
+    # Сначала очистим старые данные для чистой демонстрации
+    db.truncate_table('order_items')
+    db.truncate_table('orders')
+    db.truncate_table('products')
+    db.truncate_table('categories')
+    db.truncate_table('customers')
+    
+    # Категории - создаем с проверкой
+    try:
+        electronics_id = db.create_category("Электроника", "Техника и гаджеты")
+        print("✓ Создана категория: Электроника")
+    except sqlite3.IntegrityError:
+        # Если категория уже существует, получаем её ID
+        with db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT category_id FROM categories WHERE name = ?", ("Электроника",))
+            electronics_id = cursor.fetchone()[0]
+        print("✓ Используем существующую категорию: Электроника")
+    
+    try:
+        books_id = db.create_category("Книги", "Художественная и учебная литература")
+        print("✓ Создана категория: Книги")
+    except sqlite3.IntegrityError:
+        with db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT category_id FROM categories WHERE name = ?", ("Книги",))
+            books_id = cursor.fetchone()[0]
+        print("✓ Используем существующую категорию: Книги")
+    
+    # Продукты
+    products_data = [
+        {'name': 'iPhone 13', 'price': 799.99, 'stock_quantity': 10, 'category_id': electronics_id},
+        {'name': 'Samsung Galaxy', 'price': 699.99, 'stock_quantity': 15, 'category_id': electronics_id},
+        {'name': 'Война и мир', 'price': 25.50, 'stock_quantity': 50, 'category_id': books_id},
+        {'name': 'Преступление и наказание', 'price': 20.00, 'stock_quantity': 30, 'category_id': books_id},
+    ]
+    
+    # Удаляем старые продукты перед добавлением новых
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM products")
+        conn.commit()
+    
+    db.batch_create_products(products_data)
+    print("✓ Созданы тестовые продукты")
+    
+    # 2. Демонстрация CRUD операций
+    print("\n2. CRUD ОПЕРАЦИИ")
+    
+    # Чтение с фильтрацией
+    electronic_products = db.get_products({'category_id': electronics_id})
+    print(f"✓ Электронные продукты: {len(electronic_products)} шт.")
+    
+    # Обновление
+    if electronic_products:
+        first_product_id = electronic_products[0]['product_id']
+        db.update_product(first_product_id, {'price': 749.99, 'stock_quantity': 8})
+        print("✓ Цена первого продукта обновлена")
+    
+    # Массовое обновление
+    db.bulk_update_prices(books_id, 10)  # +10% к ценам книг
+    print("✓ Цены на книги увеличены на 10%")
+    
+    # 3. Сложные запросы
+    print("\n3. СЛОЖНЫЕ ЗАПРОСЫ")
+    
+    # Отчет по продажам (пустой, т.к. нет заказов)
+    sales_report = db.get_sales_report()
+    print(f"✓ Отчет по продажам сформирован: {len(sales_report)} категорий")
+    
+    # Популярные продукты
+    popular = db.get_popular_products(3)
+    print(f"✓ Топ-3 продуктов: {[p['name'] for p in popular]}")
+    
+    # 4. Импорт/экспорт
+    print("\n4. ИМПОРТ/ЭКСПОРТ ДАННЫХ")
+    
+    # Экспорт в CSV
+    try:
+        db.export_table_to_csv('products', 'products_export.csv')
+        print("✓ Продукты экспортированы в CSV")
+    except Exception as e:
+        print(f"⚠ Ошибка экспорта в CSV: {e}")
+    
+    # Экспорт в JSON
+    try:
+        db.export_query_to_json(
+            "SELECT * FROM products WHERE price > 100",
+            'expensive_products.json'
+        )
+        print("✓ Дорогие продукты экспортированы в JSON")
+    except Exception as e:
+        print(f"⚠ Ошибка экспорта в JSON: {e}")
+    
+    # 5. Оптимизация и статистика
+    print("\n5. ОПТИМИЗАЦИЯ И МОНИТОРИНГ")
+    
+    try:
+        db.optimize_database()
+        print("✓ База данных оптимизирована")
+    except Exception as e:
+        print(f"⚠ Ошибка оптимизации: {e}")
+    
+    stats = db.get_database_stats()
+    print(f"✓ Статистика собрана: {stats.get('products_count', 0)} продуктов, {stats.get('categories_count', 0)} категорий")
+    
+    print("\n=== ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА УСПЕШНО ===")
+    
+    
