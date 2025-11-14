@@ -188,3 +188,8 @@ Built with ❤️ using Python and SQLite
 Simple, powerful, and efficient database management
 
 </div> ```
+
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
